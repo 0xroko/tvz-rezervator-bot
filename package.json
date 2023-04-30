@@ -15,6 +15,9 @@
     "start": "node dist/maind.js",
     "format": "prettier -w \"src/**/*.ts\""
   },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "files": [
     "dist"
   ],

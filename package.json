@@ -1,65 +1,66 @@
 {
-	"name": "tvz-rezervator-bot",
-	"version": "0.0.1",
-	"description": "",
-	"main": "dist/maind.js",
-	"bin": {
-		"rez-bot": "./dist/maind.js"
-	},
-	"scripts": {
-		"clean": "rimraf dist",
-		"gen": "set PWDEBUG=console && pnpm exec playwright codegen moj.tvz.hr",
-		"release": "release-it",
-		"dev": "ts-node-dev -r tsconfig-paths/register main.ts",
-		"build": "node scripts/build.js",
-		"start": "node dist/maind.js"
-	},
-	"files": [
-		"dist"
-	],
-	"keywords": [],
-	"author": "",
-	"license": "ISC",
-	"devDependencies": {
-		"@types/cron": "^2.0.0",
-		"@types/forever-monitor": "^1.7.6",
-		"@types/fs-extra": "^11.0.1",
-		"@types/markdown-escape": "^1.1.0",
-		"@types/node": "^18.8.2",
-		"@types/node-telegram-bot-api": "^0.57.6",
-		"@types/yargs": "^17.0.22",
-		"esbuild": "^0.17.7",
-		"esbuild-plugin-pino": "^1.2.8",
-		"prettier": "^2.7.1",
-		"release-it": "^15.10.2",
-		"rimraf": "^4.1.2",
-		"ts-node": "^10.9.1",
-		"ts-node-dev": "^2.0.0",
-		"tsc-alias": "^1.8.2",
-		"tsconfig-paths": "^4.1.2",
-		"typescript": "^4.8.4"
-	},
-	"dependencies": {
-		"conf": "^10.2.0",
-		"cron": "^2.1.0",
-		"date-fns": "^2.29.3",
-		"dotenv": "^16.0.3",
-		"forever": "^4.0.3",
-		"forever-monitor": "^3.0.3",
-		"fs-extra": "^11.1.0",
-		"immer": "^9.0.19",
-		"nanoid": "^3.3.4",
-		"node-telegram-bot-api": "^0.61.0",
-		"nodemon": "^2.0.20",
-		"pino": "^8.10.0",
-		"pino-abstract-transport": "^1.0.0",
-		"pino-pretty": "^9.3.0",
-		"playwright": "^1.26.1",
-		"superjson": "^1.12.2",
-		"yargs": "^17.6.2",
-		"zod": "^3.20.2"
-	},
-	"engines": {
-		"node": ">= 16"
-	}
+  "name": "tvz-rezervator-bot",
+  "version": "0.0.1",
+  "description": "",
+  "main": "dist/maind.js",
+  "bin": {
+    "rez-bot": "./dist/maind.js"
+  },
+  "scripts": {
+    "clean": "rimraf dist",
+    "gen": "set PWDEBUG=console && pnpm exec playwright codegen moj.tvz.hr",
+    "release": "release-it",
+    "dev": "ts-node-dev -r tsconfig-paths/register main.ts",
+    "build": "node scripts/build.js",
+    "start": "node dist/maind.js",
+    "format": "prettier -w \"src/**/*.ts\""
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/cron": "^2.0.0",
+    "@types/forever-monitor": "^1.7.6",
+    "@types/fs-extra": "^11.0.1",
+    "@types/markdown-escape": "^1.1.0",
+    "@types/node": "^18.8.2",
+    "@types/node-telegram-bot-api": "^0.57.6",
+    "@types/yargs": "^17.0.22",
+    "esbuild": "^0.17.7",
+    "esbuild-plugin-pino": "^1.2.8",
+    "prettier": "^2.7.1",
+    "release-it": "^15.10.2",
+    "rimraf": "^4.1.2",
+    "ts-node": "^10.9.1",
+    "ts-node-dev": "^2.0.0",
+    "tsc-alias": "^1.8.2",
+    "tsconfig-paths": "^4.1.2",
+    "typescript": "^4.8.4"
+  },
+  "dependencies": {
+    "conf": "^10.2.0",
+    "cron": "^2.1.0",
+    "date-fns": "^2.29.3",
+    "dotenv": "^16.0.3",
+    "forever": "^4.0.3",
+    "forever-monitor": "^3.0.3",
+    "fs-extra": "^11.1.0",
+    "immer": "^9.0.19",
+    "nanoid": "^3.3.4",
+    "node-telegram-bot-api": "^0.61.0",
+    "nodemon": "^2.0.20",
+    "pino": "^8.10.0",
+    "pino-abstract-transport": "^1.0.0",
+    "pino-pretty": "^9.3.0",
+    "playwright": "^1.26.1",
+    "superjson": "^1.12.2",
+    "yargs": "^17.6.2",
+    "zod": "^3.20.2"
+  },
+  "engines": {
+    "node": ">= 16"
+  }
 }

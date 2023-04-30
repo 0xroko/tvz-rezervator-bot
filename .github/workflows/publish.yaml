@@ -6,12 +6,14 @@ on:
   push:
     branches:
       - main
+
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
       - uses: actions/checkout@v3
       # Setup .npmrc file to publish to GitHub Packages
@@ -20,12 +22,13 @@ jobs:
           node-version: "16.x"
           registry-url: "https://npm.pkg.github.com"
       - run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
-
+      # set PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+      - run: echo "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1" >> $GITHUB_ENV
       - uses: pnpm/action-setup@v2
         with:
           version: "latest"
       - run: pnpm install
       - run: pnpm build
-      - run: npm publish
+      - run: pnpm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

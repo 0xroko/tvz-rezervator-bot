@@ -27,9 +27,9 @@ Potrebni alati:
 - npm/yarn/pnpm
 
 ```bash
-pnpm -g i tvz-registator # ili
-npm -g i tvz-registator # ili
-yarn global add tvz-registator
+pnpm -g i tvz-rezervator-bot # ili
+npm -g i tvz-rezervator-bot # ili
+yarn global add tvz-rezervator-bot
 ```
 
 ### Kreiranje Telegram bota
@@ -49,15 +49,15 @@ Lista varijabla koje su potrebne za rad bota:
 Postavljanje varijabla
 
 ```bash
-reg-bot set TVZ_EMAIL iprezime@tvz.hr
-reg-bot set TVZ_PASSWORD moj_pass
-reg-bot set TG_SECRET ovo_je_ta_tajna
+rez-bot set TVZ_EMAIL iprezime@tvz.hr
+rez-bot set TVZ_PASSWORD moj_pass
+rez-bot set TG_SECRET ovo_je_ta_tajna
 ```
 
 ## Pokretanje
 
 ```bash
-reg-bot
+rez-bot
 ```
 
 Nakon pokretanja bot je spreman za [korištenje](#korištenje). U slučaju greške pri radu, bot će se automatski restartati

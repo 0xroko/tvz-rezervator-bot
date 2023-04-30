@@ -4,7 +4,7 @@
 	"description": "",
 	"main": "dist/maind.js",
 	"bin": {
-		"reg-bot": "./dist/maind.js"
+		"rez-bot": "./dist/maind.js"
 	},
 	"scripts": {
 		"clean": "rimraf dist",

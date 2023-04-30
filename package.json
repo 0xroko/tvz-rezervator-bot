@@ -19,6 +19,11 @@
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
   },
+  "release-it": {
+    "npm": {
+      "publish": false
+    }
+  },
   "files": [
     "dist"
   ],

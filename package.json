@@ -2,6 +2,7 @@
   "name": "tvz-rezervator-bot",
   "version": "0.0.1",
   "description": "",
+  "repository": "https://github.com/0xroko/tvz-rezervator-bot.git",
   "main": "dist/maind.js",
   "bin": {
     "rez-bot": "./dist/maind.js"

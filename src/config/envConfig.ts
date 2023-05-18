@@ -41,7 +41,7 @@ export const trueEnvConfig = {
 export const validateAndSetEnvValue = (key: keyof EnvConfig, value: any) => {
   const parsed = envConfigSchema.shape[key].safeParse(value);
   if (!parsed.success) {
-    logger.error(fmtZodError(parsed));
+    logger.errorPlain(fmtZodError(parsed));
     return false;
   } else {
     envConfig.set(key, value);

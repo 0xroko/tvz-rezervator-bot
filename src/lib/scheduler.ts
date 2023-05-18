@@ -49,14 +49,16 @@ const onReservationSchedulerRun = async (appointment: Appointment) => {
         await globalTelegramHelper.sendHtmlMessage(errorMsg);
       },
       onSuccess: async () => {
+        // remove appointment if it was successfully reserved
         appDataHelpers.removeAppointment(appointment.id);
         await globalTelegramHelper.sendHtmlMessage(
           `Successfully reserved for ${fmtAppointment(appointment, {
             short: true,
           })}`
         );
-        const img = createReadStream(config.paths.img.latest);
-        await globalTelegramHelper.sendPhoto(img);
+        //
+        // const img = createReadStream(config.paths.img.latest);
+        // await globalTelegramHelper.sendPhoto(img);
       },
     });
     logger.info(

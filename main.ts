@@ -95,6 +95,9 @@ import { wrapper } from "axios-cookiejar-support";
 import { CookieJar } from "tough-cookie";
 
 import iconv from "iconv-lite";
+import { loginNew } from "actions/login";
+import { load } from "cheerio";
+import { writeFile } from "fs/promises";
 
 export const defaultHeaders = {
   "Content-Type": "application/x-www-form-urlencoded",
@@ -122,8 +125,37 @@ export const decodeAxiosResponseData = (data: any) => {
 };
 
 export const jar = new CookieJar();
-export const axiosInstance = axios.create({ jar, withCredentials: true });
+export const axiosInstance = axios.create({
+  jar,
+  withCredentials: true,
+  responseEncoding: "binary",
+  responseType: "blob",
+});
 export const client = wrapper(axiosInstance);
+
+client.interceptors.request.use((config) => {
+  const TVZ_COOKIE = config.jar?.getCookieStringSync(config.url!).split("=")[0];
+  let Referer = config.headers?.Referer ?? config.url!;
+  Referer += `?TVZ=${TVZ_COOKIE}`;
+
+  config.withCredentials = true;
+  config.headers = {
+    ...config.headers,
+    ...defaultHeaders,
+    Referer: Referer,
+  } as any;
+
+  config.responseType = "blob";
+  config.responseEncoding = "binary";
+
+  return config;
+});
+
+client.interceptors.response.use((response) => {
+  response.data = decodeAxiosResponseData(response.data);
+
+  return response;
+});
 
 declare module "axios" {
   interface AxiosRequestConfig {

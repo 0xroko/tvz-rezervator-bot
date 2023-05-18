@@ -1,5 +1,8 @@
 import { envConfig } from "@/config/envConfig";
 import { Page } from "playwright";
+import { client } from "../../main";
+import { load } from "cheerio";
+import { logger } from "@/lib/log";
 
 export const login = async (
   page: Page,
@@ -22,4 +25,22 @@ export const login = async (
     page.waitForNavigation(),
     page.locator("text=Ulogiraj me").click(),
   ]);
+};
+
+export const loginNew = async (url?: string) => {
+  logger.trace("begin login");
+  const login = await client.post(
+    url ?? "https://moj.tvz.hr",
+    `passwd=${envConfig.get("TVZ_PASSWORD")}&login=${envConfig.get(
+      "TVZ_EMAIL"
+    )}`
+  );
+  logger.trace("end login");
+
+  const $ = load(login.data);
+  if ($("input[name='passwd']").length > 0) {
+    throw new Error("Login failed or invalid credentials!");
+  }
+
+  return login;
 };

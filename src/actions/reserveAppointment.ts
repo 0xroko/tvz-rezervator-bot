@@ -1,8 +1,10 @@
 import { logger } from "@/lib/log";
-import { Appointment } from "@/types/bot";
+import { Appointment, SerializedField } from "@/types/bot";
 import { chromium } from "playwright";
 import { config } from "../config";
-import { login } from "./login";
+import { login, loginNew } from "./login";
+import { load } from "cheerio";
+import { client } from "../../main";
 
 interface Add {
   onSuccess: () => Promise<void>;
@@ -22,36 +24,75 @@ export const prepareForReserve = async ({
 }: PrepareForReserve) => {
   const startTimestamp = Date.now();
 
-  const browser = await chromium.launch({
-    headless: true,
-  });
-
-  const page = await browser.newPage();
+  let groupPageForm: SerializedField[] = [];
 
   try {
-    await login(page, appointment.url);
-    await page.locator("text=Rezervacija labosa").click();
+    const login = await loginNew(appointment.url);
+    const $ = load(login.data);
+    // find form needed to request right appointment group
+    const groupForm = $(`*:contains('${appointment.groupText}')`)
+      .last()
+      .parent()
+      .find("form");
+
+    console.log(groupForm);
+    if (groupForm.length === 0) {
+      throw new Error("Group couldn't be found!");
+    }
+
+    groupPageForm = groupForm.serializeArray();
   } catch (error) {
     await onPrepareError(error);
     return { enroll: null };
   }
 
   const time = Date.now() - startTimestamp;
-
   logger.info(`Login/setup took ${time}ms`);
 
   return {
     reserve: async ({ onError, onSuccess }: Add) => {
       const startTimestamp = Date.now();
       try {
-        const labosElement = page
-          .locator(`text=${appointment.groupText}`)
-          .locator("xpath=ancestor::*[contains(@class, 'panel-body')]")
-          .last();
+        const body = groupPageForm
+          .map((field) => {
+            return `${field.name}=${field.value}`;
+          })
+          .join("&");
 
-        const alreadyReserved = await labosElement
-          .locator("text=prijavljeni ste")
-          .isVisible();
+        const appointmentsPage = await client.post(appointment.url, body);
+
+        const $ = load(appointmentsPage.data);
+
+        const appointmentForm = $(
+          `*:contains('${appointment.appointmentText}')`
+        )
+          .last()
+          .parent()
+          .find("form");
+
+        if (appointmentForm.length === 0) {
+          throw new Error("Appointment couldn't be found!");
+        }
+
+        const appointmentPageForm = appointmentForm
+          .serializeArray()
+          .map((field) => {
+            return `${field.name}=${field.value}`;
+          })
+          .join("&");
+
+        const postReservePage = await client.post(
+          appointment.url,
+          appointmentPageForm
+        );
+
+        const $$ = load(postReservePage.data);
+
+        if ($$("input[value='obrisi']").length > 0) {
+          await onSuccess();
+        }
+
+        const alreadyReserved = false;
 
         logger.debug(`Already reserved: ${alreadyReserved}`);
 
@@ -59,32 +100,11 @@ export const prepareForReserve = async ({
           throw new Error(config.errors.ALREADY_RESERVED);
         }
 
-        // find the input submit button and click it
-        await labosElement.locator("text=Odaberi").click();
-
-        const AppointmentsElement = page
-          .locator(`text=${appointment.appointmentText}`)
-          .locator("xpath=ancestor::*[contains(@class, 'panel-default')]")
-          .last();
-
-        // await appointment.highlight();
-
-        // find input type submit inside appointment and click it
-        await AppointmentsElement.locator("input[type=submit]").click();
-
-        await AppointmentsElement.screenshot({ path: config.paths.img.latest });
-
-        await page.screenshot({
-          path: config.paths.img.latestFull,
-          fullPage: true,
-        });
-
         await onSuccess();
       } catch (error) {
         await onError(error);
       } finally {
         logger.info("Enrollment took " + (Date.now() - startTimestamp) + "ms");
-        await browser.close();
       }
     },
   };

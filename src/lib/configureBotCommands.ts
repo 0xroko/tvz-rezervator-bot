@@ -98,7 +98,7 @@ export async function configureBotCommands({
   const tgHelper = createTelgramHelper(message.chat.id);
 
   if (command in commands) {
-    logger.info(`command '${command}', args: %j`, args);
+    logger.info(`command '${command}', args: `, args);
 
     if (commands[command].lockRequired) {
       const isLocked = await ensureLockedFn(message, tgHelper.sendTextMessage);
@@ -108,7 +108,7 @@ export async function configureBotCommands({
     try {
       await commands[command].fn(message, args, tgHelper);
     } catch (error: any) {
-      logger.error(error, "Error occured while running command: %s", command);
+      logger.error(error, "Error occured while running command: ", command);
       tgHelper.sendHtmlMessage(
         `⛔ Error occured while running <b>${command}</b>\n<code>${error.message}</code>`
       );

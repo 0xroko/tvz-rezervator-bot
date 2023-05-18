@@ -28,7 +28,7 @@ export const envConfig = new Conf<Partial<EnvConfig>>({
   encryptionKey: config.envConfig.encryptionKey,
 });
 
-// TODO: implement "true" (process.env) env config for hosing providers
+// TODO: implement "true" (process.env) env config for hosting providers
 export const USE_TRUE_ENV = process.env?.USE_TRUE_ENV === "true";
 
 export const trueEnvConfig = {
@@ -41,23 +41,28 @@ export const trueEnvConfig = {
 export const validateAndSetEnvValue = (key: keyof EnvConfig, value: any) => {
   const parsed = envConfigSchema.shape[key].safeParse(value);
   if (!parsed.success) {
-    console.log(fmtZodError(parsed));
+    logger.error(fmtZodError(parsed));
     return false;
   } else {
     envConfig.set(key, value);
-    console.log(`Set ${key} to ${value}`);
+    logger.infoPlain(`Set ${key} to ${value}`);
 
     return true;
   }
+};
+
+export const clearEnvValues = () => {
+  envConfig.clear();
+  logger.infoPlain("Cleared all env values");
 };
 
 // will exit if config is invalid
 export const validateEnvConfig = (exit = true) => {
   const parsed = envConfigSchema.safeParse(envConfig.store);
   if (!parsed.success) {
-    logger.error(
-      "Config error occured! (did you set the config values?)\n",
-      fmtZodError(parsed)
+    logger.errorPlain(
+      "Config error occured! (did you set the config values?)\n" +
+        fmtZodError(parsed)
     );
     exit && exitWithoutRestart();
   }

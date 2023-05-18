@@ -1,48 +1,39 @@
-import pino from "pino";
+import { format } from "date-fns";
+import c from "picocolors";
+import { Formatter } from "picocolors/types";
 
-const transport = pino.transport({
-  targets: [
-    {
-      level: "error",
-      target: "pino/file",
-      options: {
-        mkdir: true,
-        prettyPrint: true,
-        translateTime: "SYS:standard",
-        destination: "logs/error.log",
-      },
-    },
-    {
-      level: "trace",
-      target: "pino/file",
-      options: {
-        mkdir: true,
-        prettyPrint: true,
-        translateTime: "SYS:standard",
-        destination: "logs/all.log",
-      },
-    },
-    {
-      level: "trace",
-      target: "pino-pretty",
-      options: {
-        translateTime: "SYS:hh:MM:ss",
-        levelFirst: true,
-        colorize: true,
-        destination: 0,
-      },
-    },
-  ],
-});
+const baseLog = (baseMessage: string, colorFn: Formatter, plain = false) => {
+  return (...args: Parameters<typeof console.log>) => {
+    const nArgs = args?.map((arg) => {
+      if (arg instanceof Error) {
+        const { message, stack, ...rest } = arg;
+        const msg = `${message}: ${stack}`;
+        return colorFn(msg);
+      }
+      arg = typeof arg === "string" ? arg : JSON.stringify(arg, null, 2);
+      arg = colorFn(arg);
+      return arg;
+    });
 
-export const logger = pino(
-  {
-    base: null,
-    hooks: {},
-    level: "trace",
-    serializers: {
-      err: pino.stdSerializers.err,
-    },
-  },
-  transport
-);
+    if (plain) {
+      console.log(...nArgs);
+      return;
+    }
+
+    const dateStr = c.dim(format(new Date(), "HH:mm:ss.SSS "));
+    let logPrefix = dateStr + c.inverse(colorFn(baseMessage));
+
+    console.log(logPrefix, ...nArgs);
+  };
+};
+
+export const logger = {
+  trace: baseLog("TRACE", c.yellow),
+  debug: baseLog("DEBUG", c.blue),
+  info: baseLog("INFO", c.cyan),
+  warn: baseLog("WARN", c.yellow),
+  error: baseLog("ERROR", c.red),
+  fatal: baseLog("FATAL", c.bgRed),
+  errorPlain: baseLog("", c.red, true),
+  infoPlain: baseLog("", c.cyan, true),
+};

@@ -1,15 +1,23 @@
 import { config } from "@/config/index";
+import { logger } from "@/lib/log";
 import forever from "forever-monitor";
+import { join } from "node:path";
+
+const sourceScript = "main.js";
+const sourcePath =
+  process.env?.NODE_ENV === "development" ? "dist/" : __dirname;
 
 const args = process.argv.slice(2);
 
-let child = new forever.Monitor("main.js", {
+const realSourcePath = join(sourcePath, sourceScript);
+console.log("running script at: ", realSourcePath);
+
+let child = new forever.Monitor(realSourcePath, {
   max: 999,
   silent: false,
   // forward args
-  args: args,
+  args: [...args, "--color"],
   killTree: true,
-  sourceDir: "dist/",
 });
 
 const cleanup = () => {
@@ -17,14 +25,17 @@ const cleanup = () => {
   process.exit(0);
 };
 
-child.on("exit", function () {
-  console.log("maind.js has exited");
-});
-
-child.on("exit:code", function (r) {
-  if (r === config.DO_NOT_RESTART_CODE) {
+child.on("exit:code", function (code) {
+  if (code === config.DO_NOT_RESTART_CODE) {
     cleanup();
   }
+});
+
+child.on("error", function (data) {
+  logger.error(data);
+  logger.error("This is most likely a bug with finding the bot script.");
+  logger.error(`Script path: ${realSourcePath}`);
+  cleanup();
 });
 
 child.start();

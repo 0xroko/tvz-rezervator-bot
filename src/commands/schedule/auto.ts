@@ -2,12 +2,16 @@ import { modifyAppData } from "@/lib/appSettings";
 import { fmtAppointment } from "@/lib/format";
 import { logger } from "@/lib/log";
 import { Appointment, CommandFn } from "@/types/bot";
-import { login } from "actions/login";
+import { load } from "cheerio";
 import TelegramBot from "node-telegram-bot-api";
-import { chromium, ElementHandle, Page } from "playwright";
 import { z } from "zod";
 import { nanoid, zodDateParse } from ".";
-import { bot } from "../../../main";
+import {
+  bot,
+  client,
+  decodeAxiosResponseData,
+  defaultHeaders,
+} from "../../../main";
 
 const autoScheduleSchema = z.object({
   url: z
@@ -35,68 +39,23 @@ const breakInSubArrays = <T>(arr: T[], size: number) => {
 };
 
 interface Skupina {
-  elment: ElementHandle<SVGElement | HTMLElement>;
+  form: SerializedField[];
+
   title: string;
 }
 
-export const findGroups = async (page: Page, url: string) => {
-  await Promise.all([
-    page.waitForNavigation(),
-    page.locator("text=Rezervacija labosa").click(),
-  ]);
-
-  const skupineElements = await page.$$("text=Skupina: >> .. >> ..");
-
-  let skupine: Skupina[] = [];
-
-  for (const skupinaElement of skupineElements) {
-    const headingElm = await skupinaElement.$(".col-xs-10");
-
-    let text = await headingElm?.evaluate((el) => el.childNodes[0].textContent);
-
-    if (text) {
-      text = text?.replace("Skupina:", "");
-      skupine.push({
-        elment: skupinaElement,
-        title: text,
-      });
-    }
-  }
-
-  return skupine;
-};
+interface SerializedField {
+  name: string;
+  value: string;
+}
 
 interface AppointmentSelect {
-  elment: ElementHandle<SVGElement | HTMLElement>;
+  form: SerializedField[];
+  status: string;
   title: string;
 }
 
 // skupina.element must the same as the one returned by findSkupine
-const findAppointments = async (page: Page, skupina: Skupina) => {
-  const button = await skupina.elment.$("input[type=submit]");
-
-  await Promise.all([page.waitForNavigation(), button?.click()]);
-  const appointmentElements = await page.$$(
-    "text=Rezervacija termina u skupini >> .. >> .. >> .panel"
-  );
-
-  const appointments: AppointmentSelect[] = [];
-
-  for (const appointmentElement of appointmentElements) {
-    const headingElm = await appointmentElement.$(".col-xs-10");
-    let text = await headingElm?.textContent();
-
-    text = text?.replace("Termin:", "");
-    text = text?.split("maks.studena")[0];
-    if (text)
-      appointments.push({
-        elment: appointmentElement,
-        title: text,
-      });
-  }
-
-  return appointments;
-};
 
 export type AutoScheduleCommand = z.infer<typeof autoScheduleSchema>;
 
@@ -129,31 +88,55 @@ export const autoScheduleCommand: CommandFn<AutoScheduleCommand> = async (
     });
   };
 
-  const browser = await chromium.launch({
-    headless: true,
-  });
-
   logger.info("Browser launched");
 
-  const page = await browser.newPage();
+  const login = await client.post(args.url, {
+    headers: defaultHeaders,
+    withCredentials: true,
+  });
 
-  try {
-    await login(page, args.url);
-  } catch (error) {
-    await editQueryMsg("Login failed!");
-    return;
+  const cookie = login?.config.jar?.getCookieStringSync(args.url).split("=")[0];
+  console.log(login?.config.jar?.getCookiesSync(args.url));
+
+  const labo = await client.post(args.url, `TVZ=${cookie}&supporttype=labo`, {
+    headers: {
+      ...defaultHeaders,
+      Referer: args.url + "?TVZ=" + cookie,
+    },
+    responseType: "blob",
+    responseEncoding: "binary",
+    withCredentials: true,
+  });
+
+  const $ = load(decodeAxiosResponseData(labo.data));
+  const match = $("div:contains('Rezervacija termina za studente')").last();
+
+  const skupine: Skupina[] = [];
+  const parent = match.parent();
+  // find all "panel-body" elements inside the parent
+  const panelBody = parent.find(".panel-body");
+
+  // loop through all panel-body elements
+  for (let el of panelBody) {
+    // get the text of the element
+    let text = $(el).text();
+    text = text?.replace("Skupina:", "");
+    text = text?.split("broj grupa")[0];
+    // if the text contains "Rezervacija termina za studente"
+
+    // find the form element inside the panel-body
+    const form = $(el).find("form");
+
+    // get all the form data from the form
+    const formData = form.serializeArray();
+
+    skupine.push({
+      form: formData,
+      title: text,
+    });
   }
 
-  try {
-    await page.locator("text=Rezervacija labosa").isVisible();
-  } catch (error) {
-    await editQueryMsg("❌ Aborting due to error!");
-    throw new Error("Given url does not contain Rezervacija labosa tab");
-  }
-
-  const skupine = await findGroups(page, args.url);
-
-  logger.info("Found groups %o", skupine);
+  logger.info("Found groups ", skupine);
   if (skupine.length === 0) {
     await editQueryMsg("No groups found!");
     return;
@@ -200,10 +183,67 @@ export const autoScheduleCommand: CommandFn<AutoScheduleCommand> = async (
             logger.info(`Selected group: ${skupina.title}`);
 
             try {
-              appointments = await findAppointments(page, skupina);
+              const urlEncodedFormData = skupina.form
+                .map((x) => `${x.name}=${x.value}`)
+                .join("&");
+
+              const tem = await client.post(args.url, urlEncodedFormData, {
+                headers: {
+                  ...defaultHeaders,
+                  Referer: args.url + "?TVZ=" + cookie,
+                },
+                responseType: "blob",
+                responseEncoding: "binary",
+                withCredentials: true,
+              });
+
+              const $term = load(decodeAxiosResponseData(tem.data));
+
+              // find elemnt that contains "Rezervacija termina"
+              const term = $term("div:contains('Rezervacija termina')").last();
+
+              // get the parent of the element
+              const termParent = term.parent();
+
+              // find all "panel-body" elements inside the parent
+              const termPanelBody = termParent.find(".panel");
+
+              // loop through all panel-body elements
+              for (let elt of termPanelBody) {
+                // get the text of the element
+                let text = $term(elt).find(".col-xs-10").text();
+
+                text = text?.replace("Termin:", "");
+                text = text?.split("maks.studena")[0];
+                const statusText = $term(elt).find(".col-xs-2").text();
+                // type="submit" and get the value of the button
+                const statusBtn = $term(elt)
+                  .find(".col-xs-2")
+                  .find("button[type='submit']")[0]?.attribs["value"];
+
+                logger.debug(statusText);
+                logger.debug(statusBtn);
+
+                logger.debug(text);
+
+                // find the form element inside the panel-body
+                const form = $term(elt).find("form");
+
+                // get all the form data from the form
+                const formData = form.serializeArray();
+
+                appointments.push({
+                  form: formData,
+                  title: text,
+                  status: statusText ?? statusBtn ?? "N/A",
+                });
+              }
             } catch (error) {
+              logger.error(error);
               throw new Error("");
             }
+
+            logger.info("Found appointments ", appointments);
 
             let appointmentOptions: any[] = [];
 
@@ -293,5 +333,4 @@ export const autoScheduleCommand: CommandFn<AutoScheduleCommand> = async (
   });
 
   await callbackQueryPromise;
-  await browser.close();
 };

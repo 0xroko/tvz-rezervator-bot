@@ -4,66 +4,56 @@ import { globalTelegramHelper } from "@/lib/configureBotCommands";
 import { fmtAppointment, fmtDate } from "@/lib/format";
 import { logger } from "@/lib/log";
 import { Appointment } from "@/types/bot";
-import { prepareForReserve } from "actions/reserveAppointment";
+import {
+  prepareForReserve,
+  reserveAppointment,
+} from "actions/reserveAppointment";
 import { CronJob } from "cron";
 import { differenceInMilliseconds, subSeconds } from "date-fns";
-import { createReadStream } from "fs";
-import { errors } from "playwright";
 
 const onReservationSchedulerRun = async (appointment: Appointment) => {
   let errorMsg = `Enrollment failed, you will have to do it manually, ${appointment.url}`;
 
-  const { reserve } = await prepareForReserve({
-    onPrepareError: async (err) => {
-      await globalTelegramHelper.sendTextMessage(errorMsg);
-      logger.error(err, "Error while preparing for enrollment");
-    },
-    appointment: appointment,
-  });
-
-  if (!reserve) {
+  let groupForm = "";
+  try {
+    groupForm = await prepareForReserve({
+      appointment: appointment,
+    });
+  } catch (error) {
+    logger.error(error, "Error while preparing for reservation");
+    globalTelegramHelper.sendTextMessage(errorMsg);
     return;
   }
 
   let timeToWait =
-    differenceInMilliseconds(appointment.timestamp, new Date()) + 500;
+    differenceInMilliseconds(appointment.timestamp, new Date()) + 200;
 
   timeToWait = timeToWait < 0 ? 0 : timeToWait;
 
   setTimeout(async () => {
-    logger.info(`Begin enrollment for ${appointment.id}`);
-
-    await reserve({
-      onError: async (err: any) => {
-        logger.error(err, "Error while reserving appointment");
-        if (err instanceof errors.TimeoutError) {
-          // remove appointment if there is no element with provided text
-          errorMsg +=
-            " \nReason: Timeout, you most likely provided wrong `appointmentText` or `groupText`";
-        } else if (err?.message === config.errors.ALREADY_RESERVED) {
-          appDataHelpers.removeAppointment(appointment.id);
-          errorMsg = `Already reserved for ${fmtAppointment(appointment, {
-            short: true,
-          })}`;
-        }
-        await globalTelegramHelper.sendHtmlMessage(errorMsg);
-      },
-      onSuccess: async () => {
-        // remove appointment if it was successfully reserved
-        appDataHelpers.removeAppointment(appointment.id);
-        await globalTelegramHelper.sendHtmlMessage(
-          `Successfully reserved for ${fmtAppointment(appointment, {
-            short: true,
-          })}`
-        );
-        //
-        // const img = createReadStream(config.paths.img.latest);
-        // await globalTelegramHelper.sendPhoto(img);
-      },
-    });
-    logger.info(
-      `job ${appointment.id} done (appointment at ${fmtDate(Date.now())})`
-    );
+    logger.info(`Begin reservation for ${appointment.id}`);
+    try {
+      await reserveAppointment({
+        appointment: appointment,
+        groupPageForm: groupForm,
+      });
+      await globalTelegramHelper.sendHtmlMessage(
+        `Successfully reserved for ${fmtAppointment(appointment, {
+          short: true,
+        })}`
+      );
+      logger.info(
+        `job ${appointment.id} done (appointment at ${fmtDate(Date.now())})`
+      );
+    } catch (err: any) {
+      logger.error(err, "Error while reserving appointment");
+      if (err?.message === config.errors.ALREADY_RESERVED) {
+        errorMsg = `Appointment ${appointment.id} already reserved, ${appointment.url}`;
+      }
+      await globalTelegramHelper.sendHtmlMessage(errorMsg);
+    } finally {
+      appDataHelpers.removeAppointment(appointment.id);
+    }
   }, timeToWait);
 };
 
@@ -80,8 +70,8 @@ export const reservationScheduler = ({}) => {
 
     for (const appointment of appointments) {
       try {
-        // start the job few secs earlier to account for login time
         const job = new CronJob(
+          // start the job few sec earlier to account for login time
           subSeconds(appointment.timestamp, config.coldStartSeconds),
           async () => {
             await onReservationSchedulerRun(appointment);
@@ -90,13 +80,16 @@ export const reservationScheduler = ({}) => {
           true,
           "Europe/Zagreb"
         );
-        logger.debug(
+        logger.info(
           `Schedule job ${appointment.id} at ${fmtDate(appointment.timestamp)}`
         );
 
         job.start();
         crons.push(job);
       } catch (error) {
+        logger.info(
+          `Appointment ${appointment.id} is outdated, removing it...`
+        );
         globalTelegramHelper.sendTextMessage(
           `Appointment ${appointment.id} is outdated (due: ${fmtDate(
             appointment.timestamp

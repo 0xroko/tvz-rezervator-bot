@@ -5,12 +5,14 @@ import { lockCommand } from "@/commands/lock";
 import { scheduleCommand } from "@/commands/schedule";
 import { unlockCommand } from "@/commands/unlock";
 import { envConfig, validateEnvConfig } from "@/config/envConfig";
+import { config } from "@/config/index";
 import { configureBotCommands } from "@/lib/configureBotCommands";
 import { fmtTelegramLink } from "@/lib/format";
 import { logger } from "@/lib/log";
 import { reservationScheduler } from "@/lib/scheduler";
 import { cliParse, ifAliasReplaceWithCmd, yargsBot } from "@/lib/yargs";
 import TelegramBot from "node-telegram-bot-api";
+import { exit } from "process";
 
 export let bot: TelegramBot;
 
@@ -26,6 +28,10 @@ const botMain = async () => {
     polling: true,
   });
 
+  bot.on("polling_error", (err) => {
+    exit(config.RESTART_CODE);
+  });
+
   await scheduleAppointmentReservationJobs();
 
   logger.info(`Bot started, chat link: ${fmtTelegramLink()}`);
@@ -36,7 +42,7 @@ const botMain = async () => {
       return;
     }
 
-    // TODO migrate from yargs to zod parsing since yargs functionality isn't needed
+    // note needs to return a command
     const res = ifAliasReplaceWithCmd(yargsBot.parseSync(match?.[1] ?? ""));
 
     await configureBotCommands({
@@ -89,79 +95,6 @@ const botMain = async () => {
     });
   });
 };
-
-import axios from "axios";
-import { wrapper } from "axios-cookiejar-support";
-import { CookieJar } from "tough-cookie";
-
-import iconv from "iconv-lite";
-import { loginNew } from "actions/login";
-import { load } from "cheerio";
-import { writeFile } from "fs/promises";
-
-export const defaultHeaders = {
-  "Content-Type": "application/x-www-form-urlencoded",
-  accept:
-    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-  "accept-language": "en-US,en;q=0.9,hr-HR;q=0.8,hr;q=0.7,bs;q=0.6",
-  "cache-control": "max-age=0",
-  "content-type": "application/x-www-form-urlencoded",
-  "sec-ch-ua":
-    '"Google Chrome";v="113", "Chromium";v="113", "Not-A.Brand";v="24";"Samo testam bota nije nista maliciozno ionako znate tko sam :D";v="0"',
-  "sec-ch-ua-mobile": "?0",
-  "sec-ch-ua-platform": '"Windows"',
-  "sec-fetch-dest": "document",
-  "sec-fetch-mode": "navigate",
-  "sec-fetch-site": "same-origin",
-  "sec-fetch-user": "?1",
-  "upgrade-insecure-requests": "1",
-  Referer: "https://moj.tvz.hr/",
-  "Referrer-Policy": "strict-origin-when-cross-origin",
-};
-
-export const decodeAxiosResponseData = (data: any) => {
-  const decoded = iconv.decode(data, "cp1250");
-  return decoded;
-};
-
-export const jar = new CookieJar();
-export const axiosInstance = axios.create({
-  jar,
-  withCredentials: true,
-  responseEncoding: "binary",
-  responseType: "blob",
-});
-export const client = wrapper(axiosInstance);
-
-client.interceptors.request.use((config) => {
-  const TVZ_COOKIE = config.jar?.getCookieStringSync(config.url!).split("=")[0];
-  let Referer = config.headers?.Referer ?? config.url!;
-  Referer += `?TVZ=${TVZ_COOKIE}`;
-
-  config.withCredentials = true;
-  config.headers = {
-    ...config.headers,
-    ...defaultHeaders,
-    Referer: Referer,
-  } as any;
-
-  config.responseType = "blob";
-  config.responseEncoding = "binary";
-
-  return config;
-});
-
-client.interceptors.response.use((response) => {
-  response.data = decodeAxiosResponseData(response.data);
-
-  return response;
-});
-
-declare module "axios" {
-  interface AxiosRequestConfig {
-    jar?: CookieJar;
-  }
-}
 
 const main = async () => {
   // cli parse will parse args and exit if needed

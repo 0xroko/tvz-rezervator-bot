@@ -1,40 +1,19 @@
 import { envConfig } from "@/config/envConfig";
-import { Page } from "playwright";
-import { client } from "../../main";
-import { load } from "cheerio";
+import { client } from "@/lib/axios";
 import { logger } from "@/lib/log";
+import { load } from "cheerio";
+import { stringify } from "querystring";
 
-export const login = async (
-  page: Page,
-  initialPage: string = "https://moj.tvz.hr"
-) => {
-  // await page.route("**/*", (route) => {
-  // 	return ["image", "font", "stylesheet"].includes(route.request().resourceType())
-  // 		? route.abort()
-  // 		: route.continue();
-  // });
-
-  await page.goto(initialPage, { waitUntil: "domcontentloaded" });
-
-  await page.locator('input[name="login"]').fill(envConfig.get("TVZ_EMAIL")!);
-  await page
-    .locator('input[name="passwd"]')
-    .fill(envConfig.get("TVZ_PASSWORD")!);
-
-  await Promise.all([
-    page.waitForNavigation(),
-    page.locator("text=Ulogiraj me").click(),
-  ]);
-};
-
-export const loginNew = async (url?: string) => {
+export const login = async (url?: string, body?: any) => {
   logger.trace("begin login");
-  const login = await client.post(
-    url ?? "https://moj.tvz.hr",
-    `passwd=${envConfig.get("TVZ_PASSWORD")}&login=${envConfig.get(
-      "TVZ_EMAIL"
-    )}`
-  );
+
+  const obj = {
+    ...body,
+    passwd: envConfig.get("TVZ_PASSWORD"),
+    login: envConfig.get("TVZ_EMAIL"),
+  };
+
+  const login = await client.post(url ?? "https://moj.tvz.hr", stringify(obj));
   logger.trace("end login");
 
   const $ = load(login.data);

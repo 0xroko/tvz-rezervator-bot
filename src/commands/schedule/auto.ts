@@ -1,13 +1,14 @@
 import { modifyAppData } from "@/lib/appSettings";
+import { client, jar } from "@/lib/axios";
 import { fmtAppointment } from "@/lib/format";
 import { logger } from "@/lib/log";
 import { Appointment as AppAppointment, CommandFn } from "@/types/bot";
+import { login } from "actions/login";
 import { load } from "cheerio";
 import TelegramBot from "node-telegram-bot-api";
 import { z } from "zod";
 import { nanoid, zodDateParse } from ".";
-import { bot, client, jar } from "../../../main";
-import { loginNew } from "actions/login";
+import { bot } from "../../../main";
 
 const autoScheduleSchema = z.object({
   url: z
@@ -169,7 +170,7 @@ export const autoScheduleCommand: CommandFn<AutoScheduleCommand> = async (
 
   logger.info("Browser launched");
 
-  await loginNew(args.url);
+  await login(args.url);
 
   const skupine: Group[] = await getSkupine(args.url);
 
@@ -216,7 +217,7 @@ export const autoScheduleCommand: CommandFn<AutoScheduleCommand> = async (
 
             const skupina = skupine[selectedSkupinaIndex];
 
-            logger.info(`Selected group: ${skupina.title}`);
+            logger.info(`selected group: '${skupina.title}'`);
 
             try {
               appointments = await getAppointments(args.url, skupina);
@@ -225,7 +226,7 @@ export const autoScheduleCommand: CommandFn<AutoScheduleCommand> = async (
               throw new Error("Error occured while fetching appointments");
             }
 
-            logger.info("Found appointments ", appointments);
+            logger.info(`found ${appointments.length} appointments`);
 
             let appointmentOptions: any[] = [];
 
@@ -280,7 +281,7 @@ export const autoScheduleCommand: CommandFn<AutoScheduleCommand> = async (
                     groupText: skupine[selectedSkupinaIndex].title,
                     url: args.url,
                     id: nanoid(),
-                    staus: "scheduled",
+                    status: "scheduled",
                     timestamp: parsedTimestampSchema.data.timestamp,
                   };
 

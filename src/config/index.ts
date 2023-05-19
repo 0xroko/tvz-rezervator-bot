@@ -10,7 +10,8 @@ export const config = {
   name: appName,
   coldStartSeconds: 10,
   // exit code when process is finished (e.g. env var was set), doesn't hold any special meaning
-  DO_NOT_RESTART_CODE: 125,
+  DO_NOT_RESTART_CODE: 0,
+  RESTART_CODE: 1,
   envConfig: {
     name: "env-config",
     encryptionKey: "this-is-not-really-important-but-helps-with-obscurity",

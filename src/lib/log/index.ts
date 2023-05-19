@@ -28,7 +28,7 @@ const baseLog = (baseMessage: string, colorFn: Formatter, plain = false) => {
 };
 
 export const logger = {
-  trace: baseLog("TRACE", c.yellow),
+  trace: baseLog("TRACE", c.dim),
   debug: baseLog("DEBUG", c.blue),
   info: baseLog("INFO", c.cyan),
   warn: baseLog("WARN", c.yellow),

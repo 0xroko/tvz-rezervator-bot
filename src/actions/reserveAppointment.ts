@@ -1,111 +1,82 @@
+import { client } from "@/lib/axios";
 import { logger } from "@/lib/log";
-import { Appointment, SerializedField } from "@/types/bot";
-import { chromium } from "playwright";
-import { config } from "../config";
-import { login, loginNew } from "./login";
+import { Appointment } from "@/types/bot";
+import { login } from "actions/login";
 import { load } from "cheerio";
-import { client } from "../../main";
-
-interface Add {
-  onSuccess: () => Promise<void>;
-  onError: (error: unknown) => Promise<void>;
-}
+import { config } from "../config";
 
 interface PrepareForReserve {
   appointment: Appointment;
-  onPrepareError: (error: unknown) => Promise<void>;
 }
 
-// this will open browser instance, login and return `enroll` function
-// using post requests would be faster, but requires wayyy more work
-export const prepareForReserve = async ({
-  onPrepareError: onPrepareError,
-  appointment,
-}: PrepareForReserve) => {
+export const prepareForReserve = async ({ appointment }: PrepareForReserve) => {
   const startTimestamp = Date.now();
 
-  let groupPageForm: SerializedField[] = [];
+  let groupPageForm: string;
 
-  try {
-    const login = await loginNew(appointment.url);
-    const $ = load(login.data);
-    // find form needed to request right appointment group
-    const groupForm = $(`*:contains('${appointment.groupText}')`)
-      .last()
-      .parent()
-      .find("form");
+  const loginResp = await login(appointment.url, {
+    supporttype: "labo",
+  });
+  const $ = load(loginResp.data);
 
-    console.log(groupForm);
-    if (groupForm.length === 0) {
-      throw new Error("Group couldn't be found!");
-    }
+  // find form needed to request right appointment group
+  const groupForm = $(`*:contains('${appointment.groupText}')`)
+    .last()
+    .parent()
+    .find("form");
 
-    groupPageForm = groupForm.serializeArray();
-  } catch (error) {
-    await onPrepareError(error);
-    return { enroll: null };
+  if (groupForm.length === 0) {
+    throw new Error(`Group '${appointment.groupText}' couldn't be found!`);
   }
 
+  groupPageForm = groupForm.serialize();
+
   const time = Date.now() - startTimestamp;
-  logger.info(`Login/setup took ${time}ms`);
+  logger.trace(`login took ${time}ms`);
 
-  return {
-    reserve: async ({ onError, onSuccess }: Add) => {
-      const startTimestamp = Date.now();
-      try {
-        const body = groupPageForm
-          .map((field) => {
-            return `${field.name}=${field.value}`;
-          })
-          .join("&");
+  return groupPageForm;
+};
 
-        const appointmentsPage = await client.post(appointment.url, body);
+export const reserveAppointment = async ({
+  appointment,
+  groupPageForm,
+}: {
+  appointment: Appointment;
+  groupPageForm: string;
+}) => {
+  const startTimestamp = Date.now();
+  const appointmentsPage = await client.post(appointment.url, groupPageForm);
 
-        const $ = load(appointmentsPage.data);
+  const $ = load(appointmentsPage.data);
 
-        const appointmentForm = $(
-          `*:contains('${appointment.appointmentText}')`
-        )
-          .last()
-          .parent()
-          .find("form");
+  const appointmentForm = $(`*:contains('${appointment.appointmentText}')`)
+    .last()
+    .parent()
+    .find("form");
 
-        if (appointmentForm.length === 0) {
-          throw new Error("Appointment couldn't be found!");
-        }
+  logger.trace(appointmentForm.serialize);
 
-        const appointmentPageForm = appointmentForm
-          .serializeArray()
-          .map((field) => {
-            return `${field.name}=${field.value}`;
-          })
-          .join("&");
+  if (appointmentForm.length === 0) {
+    throw new Error(
+      `No appointement with ${appointment.appointmentText} found`
+    );
+  }
 
-        const postReservePage = await client.post(
-          appointment.url,
-          appointmentPageForm
-        );
+  const alreadyReserved = $("input[value='obrisi'][name='sto1']").length > 0;
+  if (alreadyReserved) {
+    throw new Error(config.errors.ALREADY_RESERVED);
+  }
 
-        const $$ = load(postReservePage.data);
+  const postReservePage = await client.post(
+    appointment.url,
+    appointmentForm.serialize()
+  );
 
-        if ($$("input[value='obrisi']").length > 0) {
-          await onSuccess();
-        }
+  const $$ = load(postReservePage.data);
 
-        const alreadyReserved = false;
-
-        logger.debug(`Already reserved: ${alreadyReserved}`);
-
-        if (alreadyReserved) {
-          throw new Error(config.errors.ALREADY_RESERVED);
-        }
-
-        await onSuccess();
-      } catch (error) {
-        await onError(error);
-      } finally {
-        logger.info("Enrollment took " + (Date.now() - startTimestamp) + "ms");
-      }
-    },
-  };
+  if ($$("input[value='obrisi']").length > 0) {
+    logger.info(`Appointment reserved!`);
+    return;
+  }
+  logger.trace("reservation took " + (Date.now() - startTimestamp) + "ms");
 };

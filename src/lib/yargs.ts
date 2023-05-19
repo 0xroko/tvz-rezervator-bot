@@ -77,7 +77,6 @@ export const yargsBot = y
     handler: () => {},
     aliases: [...getAlias("schedule")],
   })
-
   .command({
     command: "delete [id]",
     describe: "Delete an appointment (all: *)",

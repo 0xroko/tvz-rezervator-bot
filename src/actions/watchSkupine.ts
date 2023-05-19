@@ -31,6 +31,7 @@ export const findNewGroups = async (watchedGroup: WatchedGroupData) => {
   }
 };
 
+// TODO
 export const groupWatchScheduler = () => {
   let crons: Array<CronJob> = [];
 

@@ -10,7 +10,6 @@ const sourcePath =
 const args = process.argv.slice(2);
 
 const realSourcePath = join(sourcePath, sourceScript);
-console.log("running script at: ", realSourcePath);
 
 let child = new forever.Monitor(realSourcePath, {
   max: 999,

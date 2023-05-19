@@ -31,3 +31,17 @@ export const config = {
     DATE_IN_PAST_NOT_ALLOWED: "DATE_IN_PAST_NOT_ALLOWED",
   },
 } as const;
+
+export const helpText = `
+*Rezervator bot*
+
+*Termini*
+/schedule - dodaj termin 
+/list - lista termina
+/delete - obriši termin 
+
+*Ostalo*
+/lock - zaključaj bot-a
+/unlock - otključaj bot-a
+/help - pomoć
+`;

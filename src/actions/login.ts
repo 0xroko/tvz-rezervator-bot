@@ -1,25 +1,25 @@
 import { envConfig } from "@/config/envConfig";
-import { Page } from "playwright";
+import { client } from "@/lib/axios";
+import { logger } from "@/lib/log";
+import { load } from "cheerio";
+import { stringify } from "querystring";
 
-export const login = async (
-  page: Page,
-  initialPage: string = "https://moj.tvz.hr"
-) => {
-  // await page.route("**/*", (route) => {
-  // 	return ["image", "font", "stylesheet"].includes(route.request().resourceType())
-  // 		? route.abort()
-  // 		: route.continue();
-  // });
+export const login = async (url?: string, body?: any) => {
+  logger.trace("begin login");
 
-  await page.goto(initialPage, { waitUntil: "domcontentloaded" });
+  const obj = {
+    ...body,
+    passwd: envConfig.get("TVZ_PASSWORD"),
+    login: envConfig.get("TVZ_EMAIL"),
+  };
 
-  await page.locator('input[name="login"]').fill(envConfig.get("TVZ_EMAIL")!);
-  await page
-    .locator('input[name="passwd"]')
-    .fill(envConfig.get("TVZ_PASSWORD")!);
+  const login = await client.post(url ?? "https://moj.tvz.hr", stringify(obj));
+  logger.trace("end login");
 
-  await Promise.all([
-    page.waitForNavigation(),
-    page.locator("text=Ulogiraj me").click(),
-  ]);
+  const $ = load(login.data);
+  if ($("input[name='passwd']").length > 0) {
+    throw new Error("Login failed or invalid credentials!");
+  }
+
+  return login;
 };

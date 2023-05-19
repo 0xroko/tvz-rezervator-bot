@@ -1,10 +1,11 @@
 import { modifyAppData } from "@/lib/appSettings";
+import { client, jar } from "@/lib/axios";
 import { fmtAppointment } from "@/lib/format";
 import { logger } from "@/lib/log";
-import { Appointment, CommandFn } from "@/types/bot";
+import { Appointment as AppAppointment, CommandFn } from "@/types/bot";
 import { login } from "actions/login";
+import { load } from "cheerio";
 import TelegramBot from "node-telegram-bot-api";
-import { chromium, ElementHandle, Page } from "playwright";
 import { z } from "zod";
 import { nanoid, zodDateParse } from ".";
 import { bot } from "../../../main";
@@ -34,67 +35,105 @@ const breakInSubArrays = <T>(arr: T[], size: number) => {
   return result;
 };
 
-interface Skupina {
-  elment: ElementHandle<SVGElement | HTMLElement>;
+interface SerializedField {
+  name: string;
+  value: string;
+}
+
+// asume admin won't change form data during selection
+interface Group {
+  form: SerializedField[];
   title: string;
 }
 
-export const findGroups = async (page: Page, url: string) => {
-  await Promise.all([
-    page.waitForNavigation(),
-    page.locator("text=Rezervacija labosa").click(),
-  ]);
+interface Appointment {
+  form: SerializedField[];
+  status: string;
+  title: string;
+}
 
-  const skupineElements = await page.$$("text=Skupina: >> .. >> ..");
+const getSkupine = async (url: string) => {
+  const skupine: Group[] = [];
 
-  let skupine: Skupina[] = [];
+  const cookie = jar?.getCookieStringSync(url).split("=")[0];
 
-  for (const skupinaElement of skupineElements) {
-    const headingElm = await skupinaElement.$(".col-xs-10");
+  const labo = await client.post(url, `TVZ=${cookie}&supporttype=labo`);
 
-    let text = await headingElm?.evaluate((el) => el.childNodes[0].textContent);
+  const $ = load(labo.data);
+  const match = $("div:contains('Rezervacija termina za studente')").last();
 
-    if (text) {
-      text = text?.replace("Skupina:", "");
-      skupine.push({
-        elment: skupinaElement,
-        title: text,
-      });
-    }
+  const parent = match.parent();
+  // find all "panel-body" elements inside the parent
+  const panelBody = parent.find(".panel-body");
+
+  // loop through all panel-body elements
+  for (let el of panelBody) {
+    // get the text of the element
+    let text = $(el).text();
+    text = text?.replace("Skupina:", "");
+    text = text?.split(", broj grupa")[0];
+    // if the text contains "Rezervacija termina za studente"
+
+    // find the form element inside the panel-body
+    const form = $(el).find("form");
+
+    // get all the form data from the form
+    const formData = form.serializeArray();
+
+    skupine.push({
+      form: formData,
+      title: text,
+    });
   }
 
   return skupine;
 };
 
-interface AppointmentSelect {
-  elment: ElementHandle<SVGElement | HTMLElement>;
-  title: string;
-}
+const getAppointments = async (url: string, skupina: Group) => {
+  const cookie = jar?.getCookieStringSync(url).split("=")[0];
+  const appointments: Appointment[] = [];
+  const urlEncodedFormData = skupina.form
+    .map((x) => `${x.name}=${x.value}`)
+    .join("&");
 
-// skupina.element must the same as the one returned by findSkupine
-const findAppointments = async (page: Page, skupina: Skupina) => {
-  const button = await skupina.elment.$("input[type=submit]");
+  const tem = await client.post(url, urlEncodedFormData, {});
 
-  await Promise.all([page.waitForNavigation(), button?.click()]);
-  const appointmentElements = await page.$$(
-    "text=Rezervacija termina u skupini >> .. >> .. >> .panel"
-  );
+  const $term = load(tem.data);
 
-  const appointments: AppointmentSelect[] = [];
+  // find elemnt that contains "Rezervacija termina"
+  const term = $term("div:contains('Rezervacija termina')").last();
 
-  for (const appointmentElement of appointmentElements) {
-    const headingElm = await appointmentElement.$(".col-xs-10");
-    let text = await headingElm?.textContent();
+  // get the parent of the element
+  const termParent = term.parent();
+
+  // find all "panel-body" elements inside the parent
+  const termPanelBody = termParent.find(".panel");
+
+  // loop through all panel-body elements
+  for (let elt of termPanelBody) {
+    // get the text of the element
+    let text = $term(elt).find(".col-xs-10").text();
 
     text = text?.replace("Termin:", "");
-    text = text?.split("maks.studena")[0];
-    if (text)
-      appointments.push({
-        elment: appointmentElement,
-        title: text,
-      });
-  }
+    text = text?.split(", maks.studena")[0];
+    const statusText = $term(elt).find(".col-xs-2").text();
+    // type="submit" and get the value of the button
+    const statusBtn = $term(elt)
+      .find(".col-xs-2")
+      .find("button[type='submit']")[0]?.attribs["value"];
 
+    // find the form element inside the panel-body
+    const form = $term(elt).find("form");
+
+    // get all the form data from the form
+    const formData = form.serializeArray();
+
+    appointments.push({
+      form: formData,
+      title: text,
+      status: statusText ?? statusBtn ?? "N/A",
+    });
+  }
   return appointments;
 };
 
@@ -129,31 +168,13 @@ export const autoScheduleCommand: CommandFn<AutoScheduleCommand> = async (
     });
   };
 
-  const browser = await chromium.launch({
-    headless: true,
-  });
-
   logger.info("Browser launched");
 
-  const page = await browser.newPage();
+  await login(args.url);
 
-  try {
-    await login(page, args.url);
-  } catch (error) {
-    await editQueryMsg("Login failed!");
-    return;
-  }
+  const skupine: Group[] = await getSkupine(args.url);
 
-  try {
-    await page.locator("text=Rezervacija labosa").isVisible();
-  } catch (error) {
-    await editQueryMsg("❌ Aborting due to error!");
-    throw new Error("Given url does not contain Rezervacija labosa tab");
-  }
-
-  const skupine = await findGroups(page, args.url);
-
-  logger.info("Found groups %o", skupine);
+  logger.info("Found groups ", skupine);
   if (skupine.length === 0) {
     await editQueryMsg("No groups found!");
     return;
@@ -177,11 +198,8 @@ export const autoScheduleCommand: CommandFn<AutoScheduleCommand> = async (
     },
   });
 
-  let appointments: AppointmentSelect[] = [];
-  let skupinaIndex = -1;
-
-  // TODO: not sure if there is even a date present on the page
-  let foundTimestampOnPage = false;
+  let appointments: Appointment[] = [];
+  let selectedSkupinaIndex = -1;
 
   const callbackQueryPromise = new Promise<void>((resolve, reject) => {
     bot.on("callback_query", async (callbackMsg) => {
@@ -193,17 +211,22 @@ export const autoScheduleCommand: CommandFn<AutoScheduleCommand> = async (
 
         switch (action) {
           case "group":
-            skupinaIndex = parseInt(callbackMsg.data?.split("_")[1] ?? "NaN");
+            selectedSkupinaIndex = parseInt(
+              callbackMsg.data?.split("_")[1] ?? "NaN"
+            );
 
-            const skupina = skupine[skupinaIndex];
+            const skupina = skupine[selectedSkupinaIndex];
 
-            logger.info(`Selected group: ${skupina.title}`);
+            logger.info(`selected group: '${skupina.title}'`);
 
             try {
-              appointments = await findAppointments(page, skupina);
+              appointments = await getAppointments(args.url, skupina);
             } catch (error) {
-              throw new Error("");
+              logger.error(error);
+              throw new Error("Error occured while fetching appointments");
             }
+
+            logger.info(`found ${appointments.length} appointments`);
 
             let appointmentOptions: any[] = [];
 
@@ -235,7 +258,7 @@ export const autoScheduleCommand: CommandFn<AutoScheduleCommand> = async (
             );
 
             let dateQueryMsg =
-              "<b>Reply</b> to this message with a time and date for the appointment reservation (11:34-12.2.2023)";
+              "<b>Reply</b> to this message with a time and date for the appointment reservation (format: 11:34-12.2.2023)";
             await editQueryMsg(dateQueryMsg, {
               reply_markup: {
                 inline_keyboard: [[cancelOption]],
@@ -253,12 +276,12 @@ export const autoScheduleCommand: CommandFn<AutoScheduleCommand> = async (
                     dateQueryMsg + " \n\n<b>Invalid date format (try again)</b>"
                   );
                 } else {
-                  const newAppointment: Appointment = {
+                  const newAppointment: AppAppointment = {
                     appointmentText: appointments[appointmentIndex].title,
-                    groupText: skupine[skupinaIndex].title,
+                    groupText: skupine[selectedSkupinaIndex].title,
                     url: args.url,
                     id: nanoid(),
-                    staus: "scheduled",
+                    status: "scheduled",
                     timestamp: parsedTimestampSchema.data.timestamp,
                   };
 
@@ -293,5 +316,4 @@ export const autoScheduleCommand: CommandFn<AutoScheduleCommand> = async (
   });
 
   await callbackQueryPromise;
-  await browser.close();
 };

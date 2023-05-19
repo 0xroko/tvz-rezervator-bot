@@ -1,9 +1,6 @@
-import { findGroups } from "@/commands/schedule/auto";
 import { logger } from "@/lib/log";
 import { WatchedGroupData } from "@/types/bot";
-import { login } from "actions/login";
 import { CronJob } from "cron";
-import { chromium } from "playwright";
 
 export const cronIntervals = {
   h: "0 * * * *",
@@ -28,28 +25,13 @@ const watchedPage = {
 // interval: h, d, m30, m15, m5, m1
 export const findNewGroups = async (watchedGroup: WatchedGroupData) => {
   try {
-    const page = await (await chromium.launch()).newPage();
-
-    await login(page, watchedGroup.url);
-    const groups = await findGroups(page, watchedGroup.url);
-
-    const newGroups = groups.filter(
-      (group) =>
-        !watchedGroup.lastGroups.find(
-          (lastGroup) => lastGroup.title === group.title
-        )
-    );
-
-    return {
-      newGroups,
-      groups,
-    };
   } catch (error) {
     logger.error(error, "while watching groups");
     return null;
   }
 };
 
+// TODO
 export const groupWatchScheduler = () => {
   let crons: Array<CronJob> = [];
 

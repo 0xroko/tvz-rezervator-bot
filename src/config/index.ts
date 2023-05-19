@@ -1,7 +1,7 @@
 import { envPaths } from "@/lib/env-path";
 import path from "path";
 
-export const appName = "registrator-bot";
+export const appName = "tvz-rezervator-bot";
 
 export const paths = envPaths(appName);
 
@@ -9,8 +9,9 @@ export const paths = envPaths(appName);
 export const config = {
   name: appName,
   coldStartSeconds: 10,
-  // exit code when process is finished (e.g. env var was set)
-  DO_NOT_RESTART_CODE: 9999,
+  // exit code when process is finished (e.g. env var was set), doesn't hold any special meaning
+  DO_NOT_RESTART_CODE: 0,
+  RESTART_CODE: 1,
   envConfig: {
     name: "env-config",
     encryptionKey: "this-is-not-really-important-but-helps-with-obscurity",
@@ -30,3 +31,17 @@ export const config = {
     DATE_IN_PAST_NOT_ALLOWED: "DATE_IN_PAST_NOT_ALLOWED",
   },
 } as const;
+
+export const helpText = `
+*Rezervator bot*
+
+*Termini*
+/schedule - dodaj termin 
+/list - lista termina
+/delete - obriši termin 
+
+*Ostalo*
+/lock - zaključaj bot-a
+/unlock - otključaj bot-a
+/help - pomoć
+`;

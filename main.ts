@@ -5,12 +5,14 @@ import { lockCommand } from "@/commands/lock";
 import { scheduleCommand } from "@/commands/schedule";
 import { unlockCommand } from "@/commands/unlock";
 import { envConfig, validateEnvConfig } from "@/config/envConfig";
+import { config, helpText } from "@/config/index";
 import { configureBotCommands } from "@/lib/configureBotCommands";
 import { fmtTelegramLink } from "@/lib/format";
 import { logger } from "@/lib/log";
 import { reservationScheduler } from "@/lib/scheduler";
 import { cliParse, ifAliasReplaceWithCmd, yargsBot } from "@/lib/yargs";
 import TelegramBot from "node-telegram-bot-api";
+import { exit } from "process";
 
 export let bot: TelegramBot;
 
@@ -26,6 +28,10 @@ const botMain = async () => {
     polling: true,
   });
 
+  bot.on("polling_error", (err) => {
+    exit(config.RESTART_CODE);
+  });
+
   await scheduleAppointmentReservationJobs();
 
   logger.info(`Bot started, chat link: ${fmtTelegramLink()}`);
@@ -36,7 +42,7 @@ const botMain = async () => {
       return;
     }
 
-    // TODO migrate from yargs to zod parsing since yargs functionality isn't needed
+    // note needs to return a command
     const res = ifAliasReplaceWithCmd(yargsBot.parseSync(match?.[1] ?? ""));
 
     await configureBotCommands({
@@ -66,18 +72,16 @@ const botMain = async () => {
         // telegram default command
         start: {
           fn: async (msg, args, helpers) => {
-            helpers.sendTextMessage(
-              "To start using the bot run /lock first! \n\nWhy /lock​ing? Locking 'saves' your chat id, so the bot can message you even when you don't send any commands, also it prevents other users from using the bot."
+            helpers.sendMDMessage(
+              // prettier-ignore
+              "To start using the bot run /lock first! \n\n*Why /lock​ing?*\nLocking 'saves' your chat id, so the bot can message you even when you don't send any commands, also it prevents other users from using the bot. \n\n*Help*\nRun /help command to see all available commands."
             );
           },
           lockRequired: false,
         },
         help: {
           fn: async (msg, args, helpers) => {
-            // trick to get all help text
-            yargsBot.parseSync("");
-            const helpText = await yargsBot.getHelp();
-            helpers.sendMDMessage("```\n" + helpText + "```");
+            helpers.sendMDMessage(helpText);
           },
           lockRequired: false,
         },

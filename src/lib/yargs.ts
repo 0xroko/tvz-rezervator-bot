@@ -1,5 +1,10 @@
-import { envConfigKeys, validateAndSetEnvValue } from "@/config/envConfig";
+import {
+  clearEnvValues,
+  envConfigKeys,
+  validateAndSetEnvValue,
+} from "@/config/envConfig";
 import { exitWithoutRestart } from "@/lib/exitWithoutRestart";
+import { logger } from "@/lib/log";
 import { CommandInput } from "@/types/bot";
 import yargs from "yargs";
 
@@ -72,7 +77,6 @@ export const yargsBot = y
     handler: () => {},
     aliases: [...getAlias("schedule")],
   })
-
   .command({
     command: "delete [id]",
     describe: "Delete an appointment (all: *)",
@@ -146,13 +150,21 @@ yargsCli
     describe: "Starts the bot (default command)",
     handler: () => {},
   })
+  .command({
+    command: ["clear"],
+    describe: "Clear all config values",
+    handler: () => {
+      clearEnvValues();
+      exitWithoutRestart();
+    },
+  })
   .exitProcess(false)
   .version(false)
   .help(false);
 
 export const helpCli = async () => {
   const help = await yargsCli.getHelp();
-  console.log(help);
+  logger.infoPlain(help);
 };
 
 export const cliParse = async () => {

@@ -1,91 +1,82 @@
+import { client } from "@/lib/axios";
 import { logger } from "@/lib/log";
 import { Appointment } from "@/types/bot";
-import { chromium } from "playwright";
+import { login } from "actions/login";
+import { load } from "cheerio";
 import { config } from "../config";
-import { login } from "./login";
-
-interface Add {
-  onSuccess: () => Promise<void>;
-  onError: (error: unknown) => Promise<void>;
-}
 
 interface PrepareForReserve {
   appointment: Appointment;
-  onPrepareError: (error: unknown) => Promise<void>;
 }
 
-// this will open browser instance, login and return `enroll` function
-// using post requests would be faster, but requires wayyy more work
-export const prepareForReserve = async ({
-  onPrepareError: onPrepareError,
-  appointment,
-}: PrepareForReserve) => {
+export const prepareForReserve = async ({ appointment }: PrepareForReserve) => {
   const startTimestamp = Date.now();
 
-  const browser = await chromium.launch({
-    headless: true,
+  let groupPageForm: string;
+
+  const loginResp = await login(appointment.url, {
+    supporttype: "labo",
   });
+  const $ = load(loginResp.data);
 
-  const page = await browser.newPage();
+  // find form needed to request right appointment group
+  const groupForm = $(`*:contains('${appointment.groupText}')`)
+    .last()
+    .parent()
+    .find("form");
 
-  try {
-    await login(page, appointment.url);
-    await page.locator("text=Rezervacija labosa").click();
-  } catch (error) {
-    await onPrepareError(error);
-    return { enroll: null };
+  if (groupForm.length === 0) {
+    throw new Error(`Group '${appointment.groupText}' couldn't be found!`);
   }
 
+  groupPageForm = groupForm.serialize();
+
   const time = Date.now() - startTimestamp;
+  logger.trace(`login took ${time}ms`);
 
-  logger.info(`Login/setup took ${time}ms`);
+  return groupPageForm;
+};
 
-  return {
-    reserve: async ({ onError, onSuccess }: Add) => {
-      const startTimestamp = Date.now();
-      try {
-        const labosElement = page
-          .locator(`text=${appointment.groupText}`)
-          .locator("xpath=ancestor::*[contains(@class, 'panel-body')]")
-          .last();
+export const reserveAppointment = async ({
+  appointment,
+  groupPageForm,
+}: {
+  appointment: Appointment;
+  groupPageForm: string;
+}) => {
+  const startTimestamp = Date.now();
+  const appointmentsPage = await client.post(appointment.url, groupPageForm);
 
-        const alreadyReserved = await labosElement
-          .locator("text=prijavljeni ste")
-          .isVisible();
+  const $ = load(appointmentsPage.data);
 
-        logger.debug(`Already reserved: ${alreadyReserved}`);
+  const appointmentForm = $(`*:contains('${appointment.appointmentText}')`)
+    .last()
+    .parent()
+    .find("form");
 
-        if (alreadyReserved) {
-          throw new Error(config.errors.ALREADY_RESERVED);
-        }
+  logger.trace(appointmentForm.serialize);
 
-        // find the input submit button and click it
-        await labosElement.locator("text=Odaberi").click();
+  if (appointmentForm.length === 0) {
+    throw new Error(
+      `No appointement with ${appointment.appointmentText} found`
+    );
+  }
 
-        const AppointmentsElement = page
-          .locator(`text=${appointment.appointmentText}`)
-          .locator("xpath=ancestor::*[contains(@class, 'panel-default')]")
-          .last();
+  const alreadyReserved = $("input[value='obrisi'][name='sto1']").length > 0;
+  if (alreadyReserved) {
+    throw new Error(config.errors.ALREADY_RESERVED);
+  }
 
-        // await appointment.highlight();
+  const postReservePage = await client.post(
+    appointment.url,
+    appointmentForm.serialize()
+  );
 
-        // find input type submit inside appointment and click it
-        await AppointmentsElement.locator("input[type=submit]").click();
+  const $$ = load(postReservePage.data);
 
-        await AppointmentsElement.screenshot({ path: config.paths.img.latest });
-
-        await page.screenshot({
-          path: config.paths.img.latestFull,
-          fullPage: true,
-        });
-
-        await onSuccess();
-      } catch (error) {
-        await onError(error);
-      } finally {
-        logger.info("Enrollment took " + (Date.now() - startTimestamp) + "ms");
-        await browser.close();
-      }
-    },
-  };
+  if ($$("input[value='obrisi']").length > 0) {
+    logger.info(`Appointment reserved!`);
+    return;
+  }
+  logger.trace("reservation took " + (Date.now() - startTimestamp) + "ms");
 };

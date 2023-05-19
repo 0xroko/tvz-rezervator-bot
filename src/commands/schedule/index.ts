@@ -1,6 +1,5 @@
 import { appData, modifyAppData } from "@/lib/appSettings";
 import { fmtAppointment, fmtZodError } from "@/lib/format";
-import { logger } from "@/lib/log";
 import { Appointment, CommandFn } from "@/types/bot";
 import { isAfter, isValid, parse } from "date-fns";
 import { hr } from "date-fns/locale";
@@ -64,7 +63,6 @@ const scheduleInputSchema = z
         });
         return z.NEVER;
       }
-      console.log(t.timestamp);
 
       const date = zodDateParse(t.timestamp, ctx);
       return {
@@ -88,8 +86,6 @@ export const scheduleCommand: CommandFn<ScheduleCommandInput> = async (
   argss,
   helpers
 ) => {
-  logger.debug(argss);
-
   const { sendHtmlMessage, sendTextMessage } = helpers;
   const args = scheduleInputSchema.safeParse(argss);
 
@@ -122,7 +118,7 @@ export const scheduleCommand: CommandFn<ScheduleCommandInput> = async (
 
   const newAppointment: Appointment = {
     id: id,
-    staus: "scheduled",
+    status: "scheduled",
     appointmentText: args.data.appointmentText!,
     timestamp: args.data.timestamp!,
     groupText: args.data.groupText!,

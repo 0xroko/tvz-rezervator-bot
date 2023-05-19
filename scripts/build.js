@@ -1,6 +1,5 @@
 // <reference types="esbuild" />
 const esbuild = require("esbuild");
-const esbuildPluginPino = require("esbuild-plugin-pino");
 
 esbuild
   .build({
@@ -10,10 +9,11 @@ esbuild
     minify: true,
     minifyWhitespace: true,
     minifyIdentifiers: true,
+    minifySyntax: true,
     platform: "node",
+    banner: { js: "#!/usr/bin/env node" },
     target: "node18",
     outdir: "dist",
-    plugins: [esbuildPluginPino({ transports: ["pino-pretty"] })],
   })
   .catch(() => process.exit(1))
   .then(() => process.exit(0));

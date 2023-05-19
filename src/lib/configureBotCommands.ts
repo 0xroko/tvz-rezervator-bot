@@ -1,9 +1,9 @@
+import { helpText } from "@/config/index";
 import { CommandInput, Commands, TelegramHelper } from "@/types/bot";
 import TelegramBot from "node-telegram-bot-api";
 import { bot } from "../../main";
 import { appData } from "./appSettings";
 import { logger } from "./log";
-import { yargsBot } from "./yargs";
 
 const ensureLockedFn = async (
   msg: TelegramBot.Message,
@@ -20,7 +20,7 @@ const ensureLockedFn = async (
   }
 
   if (currentId !== msg.chat.id) {
-    await sendMessage("Sorry this chat is locked to another user!");
+    await sendMessage("Sorry this chat is locked by another user!");
     return false;
   }
   return true;
@@ -98,7 +98,7 @@ export async function configureBotCommands({
   const tgHelper = createTelgramHelper(message.chat.id);
 
   if (command in commands) {
-    logger.info(`command '${command}', args: %j`, args);
+    logger.info(`command '${command}', args: `, args);
 
     if (commands[command].lockRequired) {
       const isLocked = await ensureLockedFn(message, tgHelper.sendTextMessage);
@@ -108,7 +108,7 @@ export async function configureBotCommands({
     try {
       await commands[command].fn(message, args, tgHelper);
     } catch (error: any) {
-      logger.error(error, "Error occured while running command: %s", command);
+      logger.error(error, "Error occured while running command: ", command);
       tgHelper.sendHtmlMessage(
         `⛔ Error occured while running <b>${command}</b>\n<code>${error.message}</code>`
       );
@@ -118,9 +118,8 @@ export async function configureBotCommands({
       await onReschedule();
     }
   } else {
-    const helpText = await yargsBot.getHelp();
     await tgHelper.sendMDMessage(
-      "Unkonwn command❔ \n```\n" + helpText + "```"
+      `Unkonwn command '''${command}''' \n` + helpText
     );
   }
 }

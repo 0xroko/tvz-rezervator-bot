@@ -2,18 +2,23 @@ import { cronIntervals } from "actions/watchSkupine";
 import { Nothing } from "immer/dist/internal";
 import TelegramBot, { User } from "node-telegram-bot-api";
 
+export type SerializedField = {
+  name: string;
+  value: string;
+};
+
 export interface Appointment {
   id: string;
   groupText: string;
   appointmentText: string;
   url: string;
   timestamp: Date;
-  staus: "success" | "failed" | "scheduled";
+  status: "success" | "failed" | "scheduled";
 }
 
 export interface WatchedGroupData {
   url: string;
-  interval: (typeof cronIntervals)[keyof typeof cronIntervals];
+  interval: typeof cronIntervals[keyof typeof cronIntervals];
   lastGroups: {
     title: string;
   }[];

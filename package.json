@@ -22,6 +22,9 @@
   "release-it": {
     "npm": {
       "publish": false
+    },
+    "git": {
+      "commitMessage": "chore: release v${version}"
     }
   },
   "files": [

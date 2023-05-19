@@ -5,16 +5,12 @@ Bot za rezervaciju termina na moj.tvz.hr
 > Ovaj projekt nije povezan s [TVZ-om](https://tvz.hr)
 
 https://user-images.githubusercontent.com/55251261/235353649-25f2f9fe-da7a-49fb-b15e-e1f7bc612402.mp4
+
 <p align="center"> <i>Bot demo</i> </p>
 
 Sve što botu treba su informacije o terminu i on će obaviti prijavu. Bot korisiti [Telegram](https://telegram.org/) za komunikaciju. Nakon uspješne rezervacije bot će poslati poruku, te screenshot stranice
 
 <img style="max-width: 500px" src=".github/res.png"></img>
-
-## Todo
-
-- Moodle support (LMS)
-- Rezervacija kolegija (za više godine, nisam upoznat s procesom)
 
 ## Instalacija
 
@@ -109,3 +105,8 @@ Za brisanje svih
 ```bash
 /list # alias /ls
 ```
+
+## Bilo bi dobro imati
+
+- Moodle support (LMS)
+- Rezervacija kolegija (za više godine, nisam upoznat s procesom)

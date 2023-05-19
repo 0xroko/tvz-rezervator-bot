@@ -13,7 +13,7 @@ export interface Appointment {
   appointmentText: string;
   url: string;
   timestamp: Date;
-  staus: "success" | "failed" | "scheduled";
+  status: "success" | "failed" | "scheduled";
 }
 
 export interface WatchedGroupData {

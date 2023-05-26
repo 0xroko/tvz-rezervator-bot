@@ -2,15 +2,20 @@
 
 Bot za rezervaciju termina na moj.tvz.hr
 
-> Ovaj projekt nije povezan s [TVZ-om](https://tvz.hr)
+> Projekt je neovisan i ne asocira se s [TVZ-om](https://tvz.hr)
 
-https://user-images.githubusercontent.com/55251261/235353649-25f2f9fe-da7a-49fb-b15e-e1f7bc612402.mp4
+<!-- gif -->
+<p align="center">
+  <img style="max-width: 700px" src=".github/demo.gif"></img>
+</p>
 
-<p align="center"> <i>Bot demo</i> </p>
+<p align="center"> <i>Primjer korištenja bota</i> </p>
 
-Sve što botu treba su informacije o terminu i on će obaviti prijavu. Bot korisiti [Telegram](https://telegram.org/) za komunikaciju. Nakon uspješne rezervacije bot će poslati poruku, te screenshot stranice
+Sve što botu treba su informacije o terminu i on će obaviti prijavu. Bot korisiti [Telegram](https://telegram.org/) za komunikaciju. Nakon uspješne rezervacije bot će poslati poruku
 
-<img style="max-width: 500px" src=".github/res.png"></img>
+<p align="center">
+  <img style="max-width: 500px" src=".github/res.png"></img>
+</p>
 
 ## Instalacija
 
@@ -79,7 +84,7 @@ Ili
 /schedule <link> <text skupine> <text termina> <vrijeme>
 ```
 
-Primjer:
+#### Primjer
 
 ```bash
 /schedule https://moj.tvz.hr/studijrac/predmet/123456 "​2​2./​2​3." "SRIJEDA 10:00" 17:35-7.2.2023
@@ -87,6 +92,18 @@ Primjer:
 
 > **Warning**
 > Tekst u zagradama mora odgovarati tekstu na stranici!
+
+#### Kako odabrati dobar `<text skupine>` i `<text termina>`
+
+Bilo bi dobro da odabrani tekst ne sadrži promjenjive informacije poput broja grupa ili maks. broja studenata
+
+![example skupina](.github/example-skupina.png)
+
+Za danu skupinu primjer dobrog `<text skupine>` je `Laboratorijske vježbe 22./23.`
+
+![example termin](.github/example-termin.png)
+
+Za dan termin primjer dobrog `<text termina>` je `ČETVRTAK: 12:30 - 14:00 (MS LAB)`
 
 ### Brisanje rezervacije
 
@@ -108,5 +125,4 @@ Za brisanje svih
 
 ## Bilo bi dobro imati
 
-- Moodle support (LMS)
-- Rezervacija kolegija (za više godine, nisam upoznat s procesom)
+- Rezervacije na LMS-u ([lms-2020.tvz.hr](https://lms-2020.tvz.hr))

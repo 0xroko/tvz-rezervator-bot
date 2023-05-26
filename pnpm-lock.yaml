@@ -78,9 +78,6 @@ devDependencies:
   '@types/fs-extra':
     specifier: ^11.0.1
     version: 11.0.1
-  '@types/markdown-escape':
-    specifier: ^1.1.0
-    version: 1.1.0
   '@types/node':
     specifier: ^18.8.2
     version: 18.8.2
@@ -615,10 +612,6 @@ packages:
 
   /@types/luxon@3.0.1:
     resolution: {integrity: sha512-/LAvk1cMOJt0ghzMFrZEvByUhsiEfeeT2IF53Le+Ki3A538yEL9pRZ7a6MuCxdrYK+YNqNIDmrKU/r2nnw04zQ==}
-    dev: true
-
-  /@types/markdown-escape@1.1.0:
-    resolution: {integrity: sha512-bJZh73L6fSt8MmTON/btR8hiKRipoIoPfLO41lxr6l65QXdG1rwUjR8Hu5xU7XYHBwKHiJZ+sTQ8L2TKkQrBpw==}
     dev: true
 
   /@types/node-telegram-bot-api@0.57.6:

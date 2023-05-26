@@ -37,7 +37,7 @@ export const deleteCommand: CommandFn<DeleteCommandInput> = async (
   });
 
   if (deleteAll) {
-    await sendTextMessage("🗑️ All scheduled reservations deleted");
+    await sendTextMessage("🗑️ Deleted all scheduled reservations");
   } else if (found) {
     await sendTextMessage(`💥 Appointment with id ${args.id} deleted`);
   } else {

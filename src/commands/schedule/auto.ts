@@ -189,7 +189,7 @@ export const autoScheduleCommand: CommandFn<AutoScheduleCommand> = async (
     });
   }
 
-  await editQueryMsg("📃 Following groups were found, select to proceed", {
+  await editQueryMsg("📃 Following groups were found, select one to proceed", {
     reply_markup: {
       inline_keyboard: breakInSubArrays(
         [...skupinaQueryKeyboard, cancelOption],
@@ -240,7 +240,7 @@ export const autoScheduleCommand: CommandFn<AutoScheduleCommand> = async (
             }
 
             await editQueryMsg(
-              "📃 Following appointments were found, select to proceed",
+              "📃 Following appointments were found, select one to proceed",
               {
                 reply_markup: {
                   inline_keyboard: breakInSubArrays(

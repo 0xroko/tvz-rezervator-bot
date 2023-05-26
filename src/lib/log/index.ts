@@ -2,6 +2,10 @@ import { format } from "date-fns";
 import c from "picocolors";
 import { Formatter } from "picocolors/types";
 
+export const fmtLogTimeStamp = (date?: number | Date) => {
+  return format(date ?? new Date(), "HH:mm:ss.SSS");
+};
+
 const baseLog = (baseMessage: string, colorFn: Formatter, plain = false) => {
   return (...args: Parameters<typeof console.log>) => {
     const nArgs = args?.map((arg) => {
@@ -20,8 +24,8 @@ const baseLog = (baseMessage: string, colorFn: Formatter, plain = false) => {
       return;
     }
 
-    const dateStr = c.dim(format(new Date(), "HH:mm:ss.SSS "));
-    let logPrefix = dateStr + c.inverse(colorFn(baseMessage));
+    const dateStr = c.dim(fmtLogTimeStamp(Date.now()));
+    let logPrefix = dateStr + " " + c.inverse(colorFn(baseMessage));
 
     console.log(logPrefix, ...nArgs);
   };

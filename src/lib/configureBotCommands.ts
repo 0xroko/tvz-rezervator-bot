@@ -102,7 +102,10 @@ export async function configureBotCommands({
 
     if (commands[command].lockRequired) {
       const isLocked = await ensureLockedFn(message, tgHelper.sendTextMessage);
-      if (!isLocked) return;
+      if (!isLocked) {
+        logger.info(`Not locked, skipping command '${command}'`);
+        return;
+      }
     }
 
     try {

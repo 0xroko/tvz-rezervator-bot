@@ -8,7 +8,7 @@ import { envConfig, validateEnvConfig } from "@/config/envConfig";
 import { config, helpText } from "@/config/index";
 import { configureBotCommands } from "@/lib/configureBotCommands";
 import { fmtTelegramLink } from "@/lib/format";
-import { logger } from "@/lib/log";
+import { fmtLogTimeStamp, logger } from "@/lib/log";
 import { reservationScheduler } from "@/lib/scheduler";
 import { cliParse, ifAliasReplaceWithCmd, yargsBot } from "@/lib/yargs";
 import TelegramBot from "node-telegram-bot-api";
@@ -37,14 +37,19 @@ const botMain = async () => {
   logger.info(`Bot started, chat link: ${fmtTelegramLink()}`);
 
   bot.onText(/\/(.+)/, async (msg, match) => {
-    // ignore messages older than 2 seconds
-    if (Date.now() - msg.date * 1000 > 1000 * 2) {
+    const nowDate = Date.now() / 1000;
+    // ignore messages older than 5 seconds
+    if (nowDate - msg?.date > 5) {
+      logger.debug(
+        `Ignoring message '${msg?.text}' from ${
+          msg.from?.first_name
+        } because it's too old (${fmtLogTimeStamp(msg?.date * 1000)})`
+      );
       return;
     }
 
     // note needs to return a command
     const res = ifAliasReplaceWithCmd(yargsBot.parseSync(match?.[1] ?? ""));
-
     await configureBotCommands({
       commands: {
         lock: {

@@ -1,6 +1,6 @@
 # Rezervator bot za moj.tvz.hr
 
-Bot za rezervaciju termina na moj.tvz.hr
+Bot za rezervaciju termina lab. vježbi na moj.tvz.hr
 
 > Projekt je neovisan i ne asocira se s [TVZ-om](https://tvz.hr)
 
@@ -72,13 +72,13 @@ Najprije treba "zaključati" bota
 
 ### Dodavanje rezervacije
 
-Bot će sam pronaći sve termine i skupine
+Bot će sam pronaći sve termine i skupine na danoj stranici kolegija
 
 ```bash
 /schedule <link> # alias s
 ```
 
-Ili
+Također je moguće ručno dodati rezervaciju
 
 ```bash
 /schedule <link> <text skupine> <text termina> <vrijeme>
@@ -97,13 +97,13 @@ Ili
 
 Bilo bi dobro da odabrani tekst ne sadrži promjenjive informacije poput broja grupa ili maks. broja studenata
 
-![example skupina](.github/example-skupina.png)
-
 Za danu skupinu primjer dobrog `<text skupine>` je `Laboratorijske vježbe 22./23.`
 
-![example termin](.github/example-termin.png)
+![example skupina](.github/example-skupina.png)
 
-Za dan termin primjer dobrog `<text termina>` je `ČETVRTAK: 12:30 - 14:00 (MS LAB)`
+Za dani termin primjer dobrog `<text termina>` je `ČETVRTAK: 12:30 - 14:00 (MS LAB)`
+
+![example termin](.github/example-termin.png)
 
 ### Brisanje rezervacije
 

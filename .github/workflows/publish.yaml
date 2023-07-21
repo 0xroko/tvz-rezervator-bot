@@ -23,8 +23,6 @@ jobs:
           node-version: "16.x"
           registry-url: "https://npm.pkg.github.com"
       - run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
-      # set PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-      - run: echo "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1" >> $GITHUB_ENV
       - uses: pnpm/action-setup@v2
         with:
           version: "latest"

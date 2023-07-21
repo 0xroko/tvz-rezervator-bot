@@ -19,14 +19,6 @@
     "start": "node dist/maind.js",
     "format": "prettier -w \"src/**/*.ts\""
   },
-  "release-it": {
-    "npm": {
-      "publish": false
-    },
-    "git": {
-      "commitMessage": "chore: release v${version}"
-    }
-  },
   "files": [
     "dist"
   ],

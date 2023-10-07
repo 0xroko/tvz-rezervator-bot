@@ -1,6 +1,6 @@
 import {
   clearEnvValues,
-  envConfigKeys,
+  requiredEnvConfigKeys,
   validateAndSetEnvValue,
 } from "@/config/envConfig";
 import { exitWithoutRestart } from "@/lib/exitWithoutRestart";
@@ -131,7 +131,7 @@ yargsCli
         .positional("key", {
           type: "string",
           describe: "Key to set",
-          choices: envConfigKeys,
+          choices: requiredEnvConfigKeys,
         })
         .positional("value", {
           type: "string",
@@ -145,6 +145,20 @@ yargsCli
     command: "set <key> <value>",
     describe: "Set config values",
   })
+  .command(
+    "setd <duration>",
+    false,
+    (y) => {
+      return y.positional("duration", {
+        type: "number",
+        describe: "Duration in milliseconds",
+      });
+    },
+    (args) => {
+      validateAndSetEnvValue("DELAY", args.duration);
+      exitWithoutRestart();
+    }
+  )
   .command({
     command: ["start"],
     describe: "Starts the bot (default command)",

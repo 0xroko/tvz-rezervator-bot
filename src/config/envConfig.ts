@@ -12,21 +12,31 @@ export const envConfigSchema = z.object({
     .endsWith("@tvz.hr", "Email must end with @tvz.hr"),
   TVZ_PASSWORD: z.string().min(1, "Password too short"),
   TG_SECRET: z.string().min(1, "Telegram secret too short"),
+  DELAY: z.optional(z.number().int().min(0)),
 });
 
 export type EnvConfig = z.infer<typeof envConfigSchema>;
 export const envConfigKeys = Object.keys(envConfigSchema.shape);
+export const requiredEnvConfigKeys = envConfigKeys.filter((key) => {
+  const schema = envConfigSchema.shape[key as keyof EnvConfig];
+  return schema._def.typeName !== z.ZodFirstPartyTypeKind.ZodOptional;
+});
 
 export const envConfig = new Conf<Partial<EnvConfig>>({
   defaults: {
     TVZ_EMAIL: undefined,
     TVZ_PASSWORD: undefined,
     TG_SECRET: undefined,
+    DELAY: 20_000,
   },
   projectName: config.name,
   configName: config.envConfig.name,
   encryptionKey: config.envConfig.encryptionKey,
 });
+
+export const getTimeOffset = () => {
+  return envConfig.get("DELAY") || 0;
+};
 
 // TODO: implement "true" (process.env) env config for hosting providers
 export const USE_TRUE_ENV = process.env?.USE_TRUE_ENV === "true";

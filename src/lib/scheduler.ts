@@ -1,3 +1,4 @@
+import { getTimeOffset } from "@/config/envConfig";
 import { config } from "@/config/index";
 import { appData, appDataHelpers } from "@/lib/appSettings";
 import { globalTelegramHelper } from "@/lib/configureBotCommands";
@@ -26,7 +27,9 @@ const onReservationSchedulerRun = async (appointment: Appointment) => {
   }
 
   let timeToWait =
-    differenceInMilliseconds(appointment.timestamp, new Date()) + 200;
+    differenceInMilliseconds(appointment.timestamp, new Date()) +
+    200 +
+    getTimeOffset();
 
   timeToWait = timeToWait < 0 ? 0 : timeToWait;
 

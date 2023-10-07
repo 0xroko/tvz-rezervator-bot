@@ -58,5 +58,5 @@ export const fmtAppointment = (
 
 export const fmtTelegramLink = () => {
   const id = envConfig.get("TG_SECRET")?.split(":")[0];
-  return `https://web.telegram.org/z/#${id}`;
+  return `https://web.telegram.org/k/#${id}`;
 };
